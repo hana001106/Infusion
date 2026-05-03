@@ -173,8 +173,7 @@ if __name__=="__main__":
         pipe = DepthEstimationPipeline.from_pretrained(checkpoint_path, torch_dtype=dtype)
         print("Using Completed")
     else:
-        
-        vae = AutoencoderKL.from_pretrained(args.model_path,subfolder='vae',torch_dtype=dtype)
+        vae = AutoencoderKL.from_pretrained(args.model_path, subfolder='vae', torch_dtype=dtype)
         scheduler = DDIMScheduler.from_pretrained(args.model_path,subfolder='scheduler',torch_dtype=dtype)
         text_encoder = CLIPTextModel.from_pretrained(args.model_path,subfolder='text_encoder',torch_dtype=dtype)
         tokenizer = CLIPTokenizer.from_pretrained(args.model_path,subfolder='tokenizer',torch_dtype=dtype)
@@ -211,22 +210,23 @@ if __name__=="__main__":
         mask[mask<0.5]=0
 
         pipe_out = pipe(input_image_path,
-             denosing_steps=denoise_steps,
-             processing_res = processing_res,
-             match_input_res = match_input_res,
-             batch_size = batch_size,
-             color_map = color_map,
-             show_progress_bar = True,
-             depth_numpy = depth_numpy,
-             mask = mask,
-             path_to_save = output_dir,
-             c2w=args.c2w,
-             intri=args.intri,
-             colors_png=args.input_rgb_path,
-             use_mask=args.use_mask,
-             blend=args.blend
-             )
+            denosing_steps=denoise_steps,
+            processing_res = processing_res,
+            match_input_res = match_input_res,
+            batch_size = batch_size,
+            color_map = color_map,
+            show_progress_bar = True,
+            depth_numpy = depth_numpy,
+            mask = mask,
+            path_to_save = output_dir,
+            c2w=args.c2w,
+            intri=args.intri,
+            colors_png=args.input_rgb_path,
+            use_mask=args.use_mask,
+            blend=args.blend
+            )
         depth_colored: Image.Image = pipe_out.depth_colored
+
         # savd as npy
         rgb_name_base = os.path.splitext(os.path.basename(input_image_path))[0]
         pred_name_base = rgb_name_base + "_pred"

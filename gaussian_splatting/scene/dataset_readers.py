@@ -98,9 +98,14 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder):
             FovX = focal2fov(focal_length_x, width)
         else:
             assert False, "Colmap camera model not handled: only undistorted datasets (PINHOLE or SIMPLE_PINHOLE cameras) supported!"
+
         image_path = os.path.join(images_folder, os.path.basename(extr.name))
         image_name = os.path.basename(image_path).split(".")[0]
-        image = Image.open(image_path).convert("RGB")
+        image_path = os.path.join(images_folder, image_name+".png") ## for spinnerf, change png
+        try:
+            image = Image.open(image_path).convert("RGB")
+        except:
+            continue
         image_extensions = ['.jpg', '.JPG', '.png', '.PNG']
         image_base_path = os.path.join(os.path.dirname(images_folder)+'/seg', os.path.splitext(os.path.basename(extr.name))[0])
         for ext in image_extensions:

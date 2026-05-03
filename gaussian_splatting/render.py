@@ -67,11 +67,13 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
         img=depth
         img = (img - img.min()) / (img.max() - img.min())
         img = (img * 255.0).astype(np.uint8)
-        img = cv2.applyColorMap(img, cv2.COLORMAP_JET)
+        # img = cv2.applyColorMap(img, cv2.COLORMAP_JET)
+        img = cv2.applyColorMap(img, cv2.COLORMAP_VIRIDIS)
+        
         cv2.imwrite(os.path.join(depth_path, view.image_name + ".png"), img)
         torchvision.utils.save_image(rendering, os.path.join(render_path, view.image_name + ".png"))
         torchvision.utils.save_image(gt, os.path.join(gts_path, view.image_name + ".png"))
-def render_sets(dataset : ModelParams, iteration : int, pipeline : PipelineParams, skip_train : bool, skip_test : bool):
+def render_sets(dataset : ModelParams, iteration : int, pipeline : PipelineParams, skip_train : bool, skip_test : bool, render_nv : bool):
     with torch.no_grad():
         gaussians = GaussianModel(dataset.sh_degree)
         scene = Scene(dataset, gaussians, load_iteration=iteration, shuffle=False)
@@ -84,6 +86,32 @@ def render_sets(dataset : ModelParams, iteration : int, pipeline : PipelineParam
         if not skip_test:
              render_set(dataset.model_path, "test", scene.loaded_iter, scene.getTestCameras(), gaussians, pipeline, background)
 
+        if render_nv:
+            from render_nv import novel_view
+            view = novel_view(os.path.join(dataset.source_path, "sparse/0"), os.path.join(dataset.source_path, "removes"))
+            removes_lst = os.listdir(os.path.join(dataset.source_path, "removes"))
+            new_view = []
+            for cam in view:
+                if cam.image_name in removes_lst:
+                    new_view.append(cam)
+            f_render_nv(dataset.model_path, "novel_view", scene.loaded_iter, new_view, gaussians, pipeline, background)
+
+def f_render_nv(model_path, name, iteration, views, gaussians, pipeline, background):
+
+    render_path = os.path.join(model_path, name, "ours_{}".format(iteration), "renders")
+    makedirs(render_path, exist_ok=True)
+    
+    t_list = []
+
+    for idx, view in enumerate(tqdm(views, desc="Rendering progress")):
+        
+        # renders = render(view, gaussians, pipeline, background)
+        render_pkg = render(view, gaussians, pipeline, background)
+
+        # renders
+        rendering = torch.clamp(render_pkg["render"], 0.0, 1.0)
+        torchvision.utils.save_image(rendering, os.path.join(render_path, '{0:05d}'.format(idx) + ".png"))
+
 if __name__ == "__main__":
     # Set up command line argument parser
     parser = ArgumentParser(description="Testing script parameters")
@@ -93,9 +121,10 @@ if __name__ == "__main__":
     parser.add_argument("--skip_train", action="store_true")
     parser.add_argument("--skip_test", action="store_true")
     parser.add_argument("--quiet", action="store_true")
+    parser.add_argument("--render_nv", action="store_true", default=False)
     args = get_combined_args(parser)
     print("Rendering " + args.model_path)
     # Initialize system state (RNG)
     safe_state(args.quiet)
 
-    render_sets(model.extract(args), args.iteration, pipeline.extract(args), args.skip_train, args.skip_test)
+    render_sets(model.extract(args), args.iteration, pipeline.extract(args), args.skip_train, args.skip_test, args.render_nv)
